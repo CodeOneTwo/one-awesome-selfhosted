@@ -1,0 +1,41 @@
+version: "3.5"
+services:
+  mariadb:
+    image: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: <password>
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - default
+      - db_network
+
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8099:8080
+    networks:
+      - default
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.adminer.rule=Host(`adminer.<my-domain>`)"
+      - "traefik.http.routers.adminer.entrypoints=websecure"
+      - "traefik.http.routers.adminer.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.adminer.loadbalancer.server.port=8080"
+      # echo $(htpasswd -nb user password) | sed -e s/\\$/\\$\\$/g
+      - "traefik.http.middlewares.adminer-auth.basicauth.users=<output-of-command>"
+      - "traefik.http.routers.adminer.middlewares=adminer-auth@docker"
+
+networks:
+  db_network:
+    name: db_network
+  web:
+    external: true
+
+volumes: 
+  dbdata:

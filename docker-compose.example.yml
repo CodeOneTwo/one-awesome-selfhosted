@@ -1,0 +1,48 @@
+version: '3.3'
+
+volumes:
+  data:
+
+services:
+  app:
+    image: imagename
+    volumes:
+      - data:/data
+    restart: always
+    environment:
+      VARIABLE: 'true'
+    networks:
+      - default
+      - db_network
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.serviceName.rule=Host(`serviceName.myown.one`)"
+      - "traefik.http.routers.serviceName.entrypoints=websecure"
+      - "traefik.http.routers.serviceName.tls.certresolver=mytlschallenge"
+      # http port of service
+      - "traefik.http.services.serviceName.loadbalancer.server.port=80"
+
+      # Security Headers
+      - "traefik.http.middlewares.serviceNameHeader.headers.customFrameOptionsValue=SAMEORIGIN"
+      - "traefik.http.middlewares.serviceNameHeader.headers.framedeny=true"
+      - "traefik.http.middlewares.serviceNameHeader.headers.sslredirect=true"
+      # HSTS
+      - "traefik.http.middlewares.serviceNameHeader.headers.stsSeconds=15552000"
+      - "traefik.http.middlewares.serviceNameHeader.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.serviceNameHeader.headers.stsPreload=true"
+      - "traefik.http.middlewares.serviceNameHeader.headers.forceSTSHeader=true"
+
+      - "traefik.http.routers.serviceName.middlewares=serviceNameHeader"
+      
+      ## echo $(htpasswd -nb user password) | sed -e s/\\$/\\$\\$/g
+      #- "traefik.http.middlewares.serviceName-auth.basicauth.users=<user>:<pass-with-salt>"
+      ## replace router middleware definition from above with
+      #- "traefik.http.routers.serviceName.middlewares=serviceNameHeader,serviceName-auth"
+
+networks:
+  db_network:
+    external: true  # is deprecated 3.5 version
+  web:
+    external: true  # is deprecated 3.5 version

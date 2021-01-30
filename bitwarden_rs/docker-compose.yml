@@ -1,0 +1,57 @@
+version: '3.5'
+
+volumes:
+  data:
+
+services:
+  app:
+    image: bitwardenrs/server
+    volumes:
+      - data:/data
+    restart: always
+    environment:
+      WEBSOCKET_ENABLED: 'true' # Required to use websockets
+      SIGNUPS_ALLOWED: 'false'   # set to false to disable signups
+      SIGNUPS_DOMAINS_WHITELIST: <my-domain>
+      # for u2f
+      DOMAIN: https://bitwarden.<my-domain>
+      # for invitations...
+      SMTP_HOST: <my-mail-server>
+      SMTP_FROM: <my-mail-address>
+      SMTP_PORT: 587
+      SMTP_SSL: 'true'
+      SMTP_USERNAME: <my-mail-username>
+      SMTP_PASSWORD: <my-password>
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.bitwarden.rule=Host(`bitwarden.myown.one`)"
+      - "traefik.http.routers.bitwarden.entrypoints=websecure"
+      - "traefik.http.routers.bitwarden.tls.certresolver=mytlschallenge"
+      # http port of service
+      - "traefik.http.services.bitwarden.loadbalancer.server.port=80"
+
+        # # Security Headers
+        # - "traefik.http.middlewares.bitwardenHeader.headers.customFrameOptionsValue=SAMEORIGIN"
+        # - "traefik.http.middlewares.bitwardenHeader.headers.framedeny=true"
+        # - "traefik.http.middlewares.bitwardenHeader.headers.sslredirect=true"
+        # # HSTS
+        # - "traefik.http.middlewares.bitwardenHeader.headers.stsSeconds=15552000"
+        # - "traefik.http.middlewares.bitwardenHeader.headers.stsIncludeSubdomains=true"
+        # - "traefik.http.middlewares.bitwardenHeader.headers.stsPreload=true"
+        # - "traefik.http.middlewares.bitwardenHeader.headers.forceSTSHeader=true"
+
+        # - "traefik.http.routers.bitwarden.middlewares=bitwardenHeader"
+       
+        # # Websockets
+        # - "traefik.http.routers.bitwarden-websocket.rule=Host(`bitwarden.myown.one`) && Path(`/notifications/hub`)"
+        # - "traefik.http.routers.bitwarden-websocket.entrypoints=websecure"
+        # - "traefik.http.routers.bitwarden-websocket.tls=true"
+        # - "traefik.http.services.bitwarden-websocket.loadbalancer.server.port=3012"
+
+
+networks:
+  web:
+    external: true  # is deprecated 3.5 version

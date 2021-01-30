@@ -1,0 +1,58 @@
+version: '3'
+
+volumes:
+  nextcloud:
+  nextcloud-data:
+
+services:
+  app:
+    image: nextcloud:stable
+    volumes:
+      - nextcloud:/var/www/html
+      - nextcloud-data:/var/www/html/data
+    restart: always
+    networks:
+      - default
+      - db_network
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.nextcloud.rule=Host(`cloud.<my-domain>`)"
+      - "traefik.http.routers.nextcloud.entrypoints=websecure"
+      - "traefik.http.routers.nextcloud.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
+
+      - "traefik.http.middlewares.nextcloud.headers.customFrameOptionsValue=SAMEORIGIN"
+      - "traefik.http.middlewares.nextcloud.headers.framedeny=true"
+      - "traefik.http.middlewares.nextcloud.headers.sslredirect=true"
+      - "traefik.http.middlewares.nextcloud.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.nextcloud.headers.stsPreload=true"
+      - "traefik.http.middlewares.nextcloud.headers.stsSeconds=15552000"
+
+      - "traefik.http.middlewares.nextcloud-dav-redirect.redirectregex.regex=^https://(.*)/.well-known/(card|cal)dav"
+      - "traefik.http.middlewares.nextcloud-dav-redirect.redirectregex.replacement=https://$$1/remote.php/dav/"
+
+      - "traefik.http.routers.nextcloud.middlewares=nextcloud-dav-redirect,nextcloud"
+
+  redis:
+    image: redis:alpine
+    restart: always
+
+  cron:
+    image: nextcloud
+    restart: always
+    networks:
+      - default
+      - db_network
+    volumes:
+      - nextcloud:/var/www/html
+      - nextcloud-data:/var/www/html/data
+    entrypoint: /cron.sh
+
+networks:
+  db_network:
+    external: true  # is deprecated 3.5 version
+  web:
+    external: true  # is deprecated 3.5 version
+

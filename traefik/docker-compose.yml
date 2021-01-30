@@ -1,0 +1,52 @@
+version: "3.3"
+
+services:
+
+  traefik:
+    image: "traefik:latest"
+    container_name: "traefik"
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
+      #- "--certificatesresolvers.mytlschallenge.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.mytlschallenge.acme.email=hostmaster@<my-domain>"
+      - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
+      # Metrics with to influxdb
+      #- "--metrics.influxdb=true"
+      #- "--metrics.influxdb.address=influxdb:8086"
+      #- "--metrics.influxdb.protocol=http"
+      #- "--metrics.influxdb.database=traefik"
+    labels:
+      # Does not work afaik
+      # - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      # - "traefik.http.routers.http-catchall.entrypoints=web"
+      # - "traefik.http.routers.http-catchall.middlewares=redirect-to-https@docker"
+      # - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # new try
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.https-redirect.entrypoints=web"
+      - "traefik.http.routers.https-redirect.rule=HostRegexp(`{any:.*}`)"
+      - "traefik.http.routers.https-redirect.middlewares=https-redirect"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+    networks:
+      - web
+      - db_network
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+networks:
+  web:
+    external: true
+  db_network:
+    external: true
